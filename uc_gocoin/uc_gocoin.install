@@ -5,53 +5,7 @@
  * Install file for uc_gocoin.module.
  */
 function uc_gocoin_schema() {
-  /*$schema['uc_payment_gocoin'] = array(
-    'description' => t('Transaction table'),
-    'fields' => array(
-      'txid' => array(
-        'description' => t('Transaction ID'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-	  'order_id' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'unsigned' => TRUE,
-        'default' => 0,
-        'description' => 'Order ID',
-      ),
-      'amount' => array(
-        'type' => 'numeric',
-        'precision' => 6,
-        'scale' => 2,
-        'not null' => TRUE,
-        'default' => 0.00,
-      ),
-	  'payee' => array(
-        'type' => 'varchar',
-        'length' => 15,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => 'PM account of payee',
-      ),
-      'payer' => array(
-        'type' => 'varchar',
-        'length' => 15,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => '',
-      ),
-      'description' => array(
-        'type' => 'text',
-        'not null' => FALSE,
-      ),
-    ),
-    'primary key' => array('txid'),
-  );
-  */
-  
+ 
    $schema['uc_payment_gocoin_ipn'] = array(
     'description' => t('Transaction table'),
     'fields' => array(
@@ -139,6 +93,13 @@ function uc_gocoin_schema() {
         'default' => '',
         'description' => '',
       ),
+      'fingerprint'  => array(
+       'type' => 'varchar',
+        'length' => 250,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => '',
+      ), 
     ),
     'primary key' => array('id'),
   );
