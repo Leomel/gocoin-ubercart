@@ -134,8 +134,9 @@ function uc_payment_method_gocoin($op, &$arg1) {
                     'price_currency' => $coin_currency,
                     'base_price' => $data->order_total,
                     'base_price_currency' => "USD", //$order_info['currency_code'],
+                    'notification_level' => "all",
                     'callback_url' => url('cart/gocoin/callback', array('absolute' => TRUE)),
-                    'redirect_url' => url('cart/gocoin/redirect', array('absolute' => TRUE)) . '?gocoin_order_id=' . $data->order_id,
+                    'redirect_url' => url('cart/gocoin/complete', array('absolute' => TRUE)) . '?gocoin_order_id=' . $data->order_id,
                     'order_id' => $data->order_id,
                     'customer_name' => $customer_name,
                     'customer_address_1' => $customer_address_1,
@@ -147,7 +148,6 @@ function uc_payment_method_gocoin($op, &$arg1) {
                     'customer_phone' => $customer_phone,
                     'customer_email' => $customer_email,
                 );
-
         $key                       = getGUID();
         $signature                 = getSignatureText($options, $key);
         $options['user_defined_8'] = $signature;
@@ -341,7 +341,10 @@ function create_gocoin_token() {
                        return;
                     }
                     
-                    var url = "'.GoCoin::requestAuthorizationCode($client_id,$client_secret_key,"user_read+merchant_read+invoice_read_write",$tokenUrl).'"              
+                    /*var url = "'.GoCoin::requestAuthorizationCode($client_id,$client_secret_key,"user_read+merchant_read+invoice_read_write",$tokenUrl).'"   */
+
+ var url = "https://dashboard.gocoin.com/auth?response_type=code&client_id='.$client_id.'&redirect_uri='.$tokenUrl.'&scope=user_read+merchant_read+invoice_read_write";
+
                     var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
                     var win = window.open(url, "_blank", strWindowFeatures);
                     return false;

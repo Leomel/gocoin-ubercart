@@ -5,7 +5,7 @@
  *
  */
 function uc_gocoin_complete($cart_id = 0) {
-            
+       sleep(5);     
     watchdog('GoCoin', 'Receiving new order notification for order !order_id.', array('!order_id' => check_plain($_REQUEST['gocoin_order_id'])));
     $order = uc_order_load($_REQUEST['gocoin_order_id']);
           
@@ -59,6 +59,7 @@ function uc_gocoin_create_token() {
 
 function getNotifyData() {
     $post_data = file_get_contents("php://input");
+    error_log('\n'.date('l jS \of F Y h:i:s A').$post_data,3,'tester.log');
     if (!$post_data) {
         $response = new stdClass();
         $response->error = 'Post Data Error';
@@ -131,33 +132,34 @@ function _paymentStandard() {
                 switch($event)
                 {
                     case 'invoice_created':
-                    case 'invoice_payment_received':
+                    case 'invoice_payment_received':  
                         $sts = ''; // Failed
-                        $msg = 'A payment has been declined.';
-                        uc_order_comment_save($order_id, 0, t($msg), 'admin');
-                      break;
+                        $msg = ''.$event;
+                        uc_order_comment_save($order_id, 0, t($msg), 'admin'); 
+                    break; 
+
                     case 'invoice_ready_to_ship':
                      
                         $sts = 'processing';
                         $msg = 'A payment has been accepted.';   
-                        
-                        $order = uc_order_load((int) $order_id);
-                        $order_state = uc_order_status_data($order->order_status, 'state');
-                        if ($order_state != 'in_checkout' && $order_state != 'post_checkout') 
-                        {
-                            $err = TRUE;
-                            $description = 'Declined. The order is paid, complete or canceled.';
-                        }
-                        if ($order === FALSE) {
-
-                        }
-                        else{
-                            if ($sts != ''){
-                                uc_order_update_status($order_id, $sts);
+                        if (($status == 'paid') || ($status == 'ready_to_ship')) {
+                            $order = uc_order_load((int) $order_id);
+                            $order_state = uc_order_status_data($order->order_status, 'state');
+                            if ($order_state != 'in_checkout' && $order_state != 'post_checkout') 
+                            {
+                                $err = TRUE;
+                                $description = 'Declined. The order is paid, complete or canceled.';
                             }
-                            uc_order_comment_save($order_id, 0, t($msg), 'admin');
+                            if ($order === FALSE) {
+
+                            }
+                            else{
+                                if ($sts != ''){
+                                    uc_order_update_status($order_id, $sts);
+                                }
+                                uc_order_comment_save($order_id, 0, t($msg), 'admin');
+                            }
                         }
-                        
                         break;
                 }
       }
