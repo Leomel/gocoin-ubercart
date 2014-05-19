@@ -1,6 +1,6 @@
 <?php
 /**
- * @file
+ * @file 
  *  
  *
  */
@@ -10,7 +10,7 @@ function uc_gocoin_complete($cart_id = 0) {
     $order = uc_order_load($_REQUEST['gocoin_order_id']);
           
     if ($order === FALSE || $order->order_status != 'processing') {
-        return t('An error has occurred during payment.  Please contact us to ensure your order has submitted.');
+        return t('Awaiting Payment Confirmation from GoCoin.');
     }
     else {
         if ( $order->order_status == 'processing') {
