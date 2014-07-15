@@ -30,7 +30,7 @@ function uc_gocoin_redirect() {
         drupal_goto($url1);
         exit;
     } else {
-        $url1 = url('cart/gocoin/checkout', array('absolute' => TRUE));
+        $url1 = url('cart/checkout', array('absolute' => TRUE));
         drupal_goto($url1);
         exit;
     }

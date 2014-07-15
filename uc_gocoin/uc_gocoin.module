@@ -79,7 +79,7 @@ function uc_gocoin_form_alter(&$form, &$form_state, $form_id) {
 function uc_gocoin_uc_payment_method() {
     $path = base_path() . drupal_get_path('module', 'uc_gocoin');
     $title = variable_get('uc_gocoin_method_title', t('Gocoin'));
-
+        
 
     $methods[] = array(
         'id' => 'gocoin',
@@ -100,7 +100,15 @@ function uc_gocoin_uc_payment_method() {
 
 // Adds Gocoin settings to the payment method settings form.
 function uc_payment_method_gocoin($op, &$arg1) {
-
+         if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
+               $php_version_allowed = true ;
+         }
+         else{
+               $php_version_allowed = false ;
+                drupal_set_message(t('The minimum PHP version required for GoCoin plugin is 5.3.0', array('@modules' => url('admin/modules', array('fragment' => 'edit-modules-ubercart-payment')))), 'warning');
+                return false;
+         }    
+        
     $pay_url = 'https://gateway.gocoin.com/merchant/';
 
     switch ($op) {
@@ -114,55 +122,60 @@ function uc_payment_method_gocoin($op, &$arg1) {
             $json = array();
             if (isset($arg1) && isset($arg1->order_id)) {
                 $data = $arg1;
-
+                /* coin currency BTC/LTC etc */
                 $coin_currency = isset($_REQUEST['paytype']) && !empty($_REQUEST['paytype']) ? $_REQUEST['paytype'] : '';
-
-                $customer_name = $data->billing_first_name . ' ' . $data->billing_last_name;
-                $customer_city = $data->billing_city;
-                $customer_address_1 = $data->billing_street1;
-                $customer_address_2 = $data->billing_street2;
-                $customer_region = uc_get_zone_code($data->billing_zone);
-                $customer_postal_code = $data->billing_postal_code;
-                $customer_country = uc_get_country_data(array('country_id' => $data->billing_country));
+                
+                if($coin_currency==''){
+                    form_set_error('uc_gocoin', t('Please Select Pay Type'));
+                    return false;
+                }
+                
+                $customer_name              = $data->billing_first_name . ' ' . $data->billing_last_name;
+                $customer_city              = $data->billing_city;
+                $customer_address_1         = $data->billing_street1;
+                $customer_address_2         = $data->billing_street2;
+                $customer_region            = uc_get_zone_code($data->billing_zone);
+                $customer_postal_code       = $data->billing_postal_code;
+                $customer_country           = uc_get_country_data(array('country_id' => $data->billing_country));
                 if ($customer_country === FALSE) {
                     $customer_country = array(0 => array('country_iso_code_2' => 'US'));
                 }
-                $customer_phone = $data->billing_phone;
-                $customer_email = $data->primary_email;
+                $customer_phone             = $data->billing_phone;
+                $customer_email             = $data->primary_email;
 
                 $options = array(
-                    'price_currency' => $coin_currency,
-                    'base_price' => $data->order_total,
-                    'base_price_currency' => "USD", //$order_info['currency_code'],
-                    'notification_level' => "all",
-                    'callback_url' => url('cart/gocoin/callback', array('absolute' => TRUE)),
-                    'redirect_url' => url('cart/gocoin/complete', array('absolute' => TRUE)) . '?gocoin_order_id=' . $data->order_id,
-                    'order_id' => $data->order_id,
-                    'customer_name' => $customer_name,
-                    'customer_address_1' => $customer_address_1,
-                    'customer_address_2' => $customer_address_2,
-                    'customer_city' => $customer_city,
-                    'customer_region' => $customer_region,
-                    'customer_postal_code' => $customer_postal_code,
-                    'customer_country' => $customer_country[0]['country_iso_code_2'],
-                    'customer_phone' => $customer_phone,
-                    'customer_email' => $customer_email,
+                    'price_currency'        => $coin_currency,
+                    'base_price'            => $data->order_total,
+                    'base_price_currency'   => "USD", //$order_info['currency_code'],
+                    'notification_level'    => "all",
+                    'callback_url'          => url('cart/gocoin/callback', array('absolute' => TRUE)),
+                    'redirect_url'          => url('cart/gocoin/complete', array('absolute' => TRUE)) . '?gocoin_order_id=' . $data->order_id,
+                    'order_id'              => $data->order_id,
+                    'customer_name'         => $customer_name,
+                    'customer_address_1'    => $customer_address_1,
+                    'customer_address_2'    => $customer_address_2,
+                    'customer_city'         => $customer_city,
+                    'customer_region'       => $customer_region,
+                    'customer_postal_code'  => $customer_postal_code,
+                    'customer_country'      => $customer_country[0]['country_iso_code_2'],
+                    'customer_phone'        => $customer_phone,
+                    'customer_email'        => $customer_email,
                 );
-        $key                       = getGUID();
-        $signature                 = getSignatureText($options, $key);
-        $options['user_defined_8'] = $signature;
+                $key                       = getGUID();
+                $signature                 = getSignatureText($options, $key);
+                $options['user_defined_8'] = $signature;
         
-                $access_token = variable_get('uc_gocoin_client_access_token', '');
-                $gocoin_url = $pay_url;
+                $access_token              = variable_get('uc_gocoin_client_access_token', '');
+                $gocoin_url                = $pay_url;
 
-                if ( empty($access_token)) {
+                if ( empty($access_token)) { //-----------If  Token not found 
                     $result = 'error';
                     $json['error'] = 'GoCoin Payment Paramaters not Set. Please report this to Site Administrator.';
-                } else {
-                    try {
-                        $user = GoCoin::getUser($access_token);
-
-
+                }
+                else{ // If  Token  found 
+                    
+                    try { //----------- If no Error in user creation from token
+                        $user = GoCoin::getUser($access_token); 
                         if ($user) {
                             $merchant_id = $user->merchant_id;
                             if (!empty($merchant_id)) {
@@ -171,50 +184,66 @@ function uc_payment_method_gocoin($op, &$arg1) {
 
                                 if (isset($invoice->errors)) {
                                     $result = 'error';
-                                    $json['error'] = 'GoCoin does not permit';
+                                    $errormsg = isset($invoice->errors->currency_code[0])? $invoice->errors->currency_code[0] : '';
+                             
+                                    $json['error'] =  "Error in Processing Order using GoCoin ".$errormsg;
                                 } elseif (isset($invoice->error)) {
                                     $result = 'error';
-                                    $json['error'] = $invoice->error;
+                                    $json['error'] =  "Error in Processing Order using GoCoin ".$invoice->error;
                                 } elseif (isset($invoice->merchant_id) && $invoice->merchant_id != '' && isset($invoice->id) && $invoice->id != '') {
-                                    $url = $gocoin_url . $invoice->merchant_id . "/invoices/" . $invoice->id;
-                                    $result = 'success';
-                                    $messages = 'success';
-                                    $json['success'] = $url;
+                                    $url            = $gocoin_url . $invoice->merchant_id . "/invoices/" . $invoice->id;
+                                    $result         = 'success';
+                                    $messages       = 'success';
+                                    $json['success']= $url;
 
                                     $json_array = array(
-                                        'order_id' => $invoice->order_id,
-                                        'invoice_id' => $invoice->id,
-                                        'url' => $url,
-                                        'status' => 'invoice_created',
-                                        'btc_price' => $invoice->price,
-                                        'price' => $invoice->base_price,
-                                        'currency' => $invoice->base_price_currency,
+                                        'order_id'      => $invoice->order_id,
+                                        'invoice_id'    => $invoice->id,
+                                        'url'           => $url,
+                                        'status'        => 'invoice_created',
+                                        'btc_price'     => $invoice->price,
+                                        'price'         => $invoice->base_price,
+                                        'currency'      => $invoice->base_price_currency,
                                         'currency_type' => $invoice->price_currency,
-                                        'invoice_time' => $invoice->created_at,
+                                        'invoice_time'  => $invoice->created_at,
                                         'expiration_time' => $invoice->expires_at,
-                                        'updated_time' => $invoice->updated_at,
+                                        'updated_time'  => $invoice->updated_at,
                                         'fingerprint'   => $signature,
                                     );
                                     addTransaction_v1('payment', $json_array);
                                 }
+                                else {  //-----------  if $invoice is balnk 
+                                    $result = 'error';
+                                    $json['error'] = 'Error in Processing Order using GoCoin, please try selecting other payment options';
+                                }
                             }
-                        } else {
+                            else { //----------- If user merchant_id is blank 
+                                $result = 'error';
+                                $json['error'] = 'Error in Processing Order using GoCoin, please try selecting other payment options';
+                            }
+                        } 
+                        else { //----------- If user Variable is blank 
                             $result = 'error';
-                            $json['error'] = 'GoCoin Invalid Settings';
+                            $json['error'] = 'Error in Processing Order using GoCoin, please try selecting other payment options';
                         }
-                    } catch (Exception $e) {
+                    } 
+                    catch (Exception $e) {  
+                        //----------- If  error in user creation from token
                         $result = 'error';
-                        $json['error'] = 'GoCoin does not permit';
+                        $json['error'] = 'Error in Processing Order using GoCoin, please try selecting other payment options';
                     }
                 }
-            } else {
+            } 
+            else {
                 $json['error'] = 'Error';
             }
 
-            if (isset($json['success']) && !empty($json['success'])) {
+
+            if (isset($json['success']) && !empty($json['success'])) { // If Invoice Created Successfully
                 $_SESSION['gocoin_redirect_url'] = $json['success'];
                 return TRUE;
-            } else {
+            }
+            else { // If any Error occurred
                 form_set_error('uc_gocoin', t($json['error']));
                 return false;
             }
@@ -222,30 +251,42 @@ function uc_payment_method_gocoin($op, &$arg1) {
             return false;
 
         case 'settings':
-            $form['uc_gocoin_client_id'] = array(
-                '#type' => 'textfield',
-                '#title' => t('Client Id'),
-                '#description' => t(''),
-                '#default_value' => variable_get('uc_gocoin_client_id', ''),
-                '#size' => 50,
-            );
-            $form['uc_gocoin_client_secret_key'] = array(
-                '#type' => 'textfield',
-                '#title' => t('Client Secret Key'),
-                '#description' => t(''),
-                '#default_value' => variable_get('uc_gocoin_client_secret_key', ''),
-                '#size' => 50,
-            );
-            $form['uc_gocoin_client_access_token'] = array(
-                '#type' => 'textfield',
-                '#title' => t('Access Token'),
-                '#description' => t(''),
-                '#default_value' => variable_get('uc_gocoin_client_access_token', ''),
-                '#size' => 50,
-            );
-            $form['notice'] = array(
-                '#markup' => '<div>' . create_gocoin_token() . '</div>',
-            );
+            
+            if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
+                            $form['uc_gocoin_client_id'] = array(
+                                '#type' => 'textfield',
+                                '#title' => t('Client Id'),
+                                '#description' => t(''),
+                                '#default_value' => variable_get('uc_gocoin_client_id', ''),
+                                '#size' => 50,
+                            );
+                            $form['uc_gocoin_client_secret_key'] = array(
+                                '#type' => 'textfield',
+                                '#title' => t('Client Secret Key'),
+                                '#description' => t(''),
+                                '#default_value' => variable_get('uc_gocoin_client_secret_key', ''),
+                                '#size' => 50,
+                            );
+                            $form['uc_gocoin_client_access_token'] = array(
+                                '#type' => 'textfield',
+                                '#title' => t('Access Token'),
+                                '#description' => t(''),
+                                '#default_value' => variable_get('uc_gocoin_client_access_token', ''),
+                                '#size' => 50,
+                            );
+                            
+                            $form['notice'] = array(
+                                '#markup' => '<div>' . create_gocoin_token() . '</div>',
+                            );
+                            
+            }
+            else{
+                            $form['notice'] = array(
+                                '#markup' => '<div><span style="color:#ff0000;">The minimum PHP version required for GoCoin plugin is 5.3.0</span></div>',
+                            );
+            }
+            
+
 
             return $form;
     }
@@ -297,58 +338,56 @@ function combo_gocoin_paytype() {
 }
 
 // for create token button in  admin 
-
 function create_gocoin_token() {
     $tokenUrl          = url('cart/gocoin/create_token', array('absolute' => TRUE));
-    
     $client_id         = variable_get('uc_gocoin_client_id', '');
     $client_secret_key = variable_get('uc_gocoin_client_secret_key', '');
         
     
     $str = '<b>you can click button to get access token from gocoin.com</b> <input type="button" value="Get API TOKEN" onclick="return get_api_token();">';
     $str.= '<script type="text/javascript">
-            function get_api_token()    
-            {
-                    var client_id = "";
-                     var client_secret ="";
-                     
-                        var elements = document.getElementById("uc-payment-method-settings-form").elements;
-                        for (i=0; i<elements.length; i++){
-                            if(elements[i].name=="uc_gocoin_client_id"){
-                                client_id = elements[i].value;
-                            }
-                            if(elements[i].name=="uc_gocoin_client_secret_key"){
-                                client_secret =  elements[i].value;
-                            }
-
-                        }
-
-                    if (!client_id) {
+                function get_api_token()    
+                {
+                        var client_id = "";
+                         var client_secret ="";
                          
-                        alert("Please input Client Id !");
-                        return false;
-                    }
-                    if (!client_secret) {
-                       
-                        alert("Please input Client Secret Key !");
-                        return false;
-                    }
-                    
-                    var cid = "'.$client_id.'";
-                    var csec = "'.$client_secret_key.'";
-                    if (client_id != cid || client_secret != csec) {
-                       alert("Please save changed Client Id and Client Secret Key first!");
-                       return;
-                    }
-                    
-                    /*var url = "'.GoCoin::requestAuthorizationCode($client_id,$client_secret_key,"user_read+merchant_read+invoice_read_write",$tokenUrl).'"   */
+                            var elements = document.getElementById("uc-payment-method-settings-form").elements;
+                            for (i=0; i<elements.length; i++){
+                                if(elements[i].name=="uc_gocoin_client_id"){
+                                    client_id = elements[i].value;
+                                }
+                                if(elements[i].name=="uc_gocoin_client_secret_key"){
+                                    client_secret =  elements[i].value;
+                                }
 
- var url = "https://dashboard.gocoin.com/auth?response_type=code&client_id='.$client_id.'&redirect_uri='.$tokenUrl.'&scope=user_read+merchant_read+invoice_read_write";
+                            }
+
+                        if (!client_id) {
+                             
+                            alert("Please input Client Id !");
+                            return false;
+                        }
+                        if (!client_secret) {
+                           
+                            alert("Please input Client Secret Key !");
+                            return false;
+                        }
+                        
+                        var cid = "'.$client_id.'";
+                        var csec = "'.$client_secret_key.'";
+                        if (client_id != cid || client_secret != csec) {
+                           alert("Please save changed Client Id and Client Secret Key first!");
+                           return;
+                        }
+                         
+
+                    var url = "https://dashboard.gocoin.com/auth?response_type=code&client_id='.$client_id.'&redirect_uri='.$tokenUrl.'&scope=user_read+invoice_read_write";
 
                     var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
                     var win = window.open(url, "_blank", strWindowFeatures);
-                    return false;
-                }</script>';
+                        return false;
+                 }
+             </script>';
     return $str;
 }
 
@@ -361,6 +400,7 @@ function addTransaction_v1($type = 'payment', $details) {
     }
 }
 
+// get Unique Key
 function getGUID() {
         if (function_exists('com_create_guid')) {
             $guid = com_create_guid();
@@ -378,8 +418,9 @@ function getGUID() {
                     . substr($charid, 20, 12); // .chr(125) //"}"
             return $uuid;
         }
-    }
+}
 
+// get Signature Text
 function getSignatureText($data, $uniquekey) {
         $query_str = '';
         $include_params = array('price_currency', 'base_price', 'base_price_currency', 'order_id', 'customer_name', 'customer_city', 'customer_region', 'customer_postal_code', 'customer_country', 'customer_phone', 'customer_email');
@@ -409,5 +450,5 @@ function getSignatureText($data, $uniquekey) {
         $hash2 = hash_hmac("sha256", $query_str, $uniquekey, true);
         $hash2_encoded = base64_encode($hash2);
         return $hash2_encoded;
-    }
+}
     
