@@ -5,4 +5,8 @@
 2) Fixed the scope operators scope=user_read+invoice_read_write and remove merchant_read (file 	catalog/includes/modules/payment/gocoinpay.php)<br>
 3) Fixed validations and display of messages & log error (file	/uc_gocoin.module , /uc_gocoin/uc_gocoin.pages.inc)<br>
 
-
+#### v1.6
+1) Change in GoCoin Configration Setting in admin.<br>
+2) Change in User Authontication while invoice creation.<br>
+3) Change in Signature and hash creation validation.<br>
+4) Change in payment  validation and log the event.<br>
