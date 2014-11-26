@@ -205,6 +205,8 @@ function _paymentStandard() {
                   $msg = 'Order ' . $order_id .' is underpaid.';
                   break;
               }
+
+              $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
               $msg .= ' Event ID: '. $event_id;
                uc_order_update_status($order_id, $sts_processing);
                uc_order_comment_save($order_id, 0, t($msg),'order', $sts_processing,true);
@@ -212,6 +214,7 @@ function _paymentStandard() {
 
             case 'invoice_merchant_review':
                $msg = 'Order ' . $order_id .' is under review. Action must be taken from the GoCoin Dashboard.';
+               $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
                $msg .= ' Event ID: '. $event_id; 
                uc_order_update_status($order_id, $sts_processing);
                uc_order_comment_save($order_id, 0, t($msg),'order', $sts_processing,true);
@@ -220,6 +223,7 @@ function _paymentStandard() {
 
             case 'invoice_ready_to_ship':
               $msg = 'Order ' . $order_id .' has been paid in full and confirmed on the blockchain.';
+              $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
               $msg .= ' Event ID: '. $event_id;  
               uc_order_update_status($order_id, $sts_payment_received);
               uc_order_comment_save($order_id, 0, t($msg),'order', $sts_payment_received,true);
@@ -228,6 +232,7 @@ function _paymentStandard() {
 
             case 'invoice_invalid':
               $msg = 'Order ' . $order_id . ' is invalid and will not be confirmed on the blockchain.';
+              $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
               $msg .= ' Event ID: '. $event_id;  
               uc_order_update_status($order_id, $sts_canceled);
               uc_order_comment_save($order_id, 0, t($msg),'order', $sts_canceled,true);
